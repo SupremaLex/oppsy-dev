@@ -73,8 +73,6 @@ export function ManifestRow({ manifest, isLast, onRemove }: ManifestRowProps) {
           <span className={styles.filename}>{manifest.name}</span>
         </div>
 
-        <span className={styles.ecosystemBadge}>{'Mock type'}</span>
-
         <code className={styles.tag}>{manifest.tag ?? '—'}</code>
 
         <span
@@ -111,8 +109,8 @@ export function ManifestRow({ manifest, isLast, onRemove }: ManifestRowProps) {
             </div>
           ) : (
             <div className={styles.vulnList}>
-              {vulns.map((v) => (
-                <OsvRecordRow key={v.osv_id} osvId={v.osv_id} detectedAt={v.detected_at} />
+              {vulns.map((osv_id) => (
+                <OsvRecordRow key={osv_id} osvId={osv_id} />
               ))}
             </div>
           )}

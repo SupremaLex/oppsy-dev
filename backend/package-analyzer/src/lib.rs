@@ -8,13 +8,15 @@ use osv_types::{OsvRecord, OsvRecordId, PackageName};
 /// Abstraction over a package-ecosystem analyzer that cross-references manifest files
 /// (`Cargo.lock`, `npm.lock`, `yarn.lock` etc.) against OSV vulnerability records.
 #[derive(Debug)]
-pub struct Analyzer<ManifestId> {
+pub struct Analyzer<ManifestId: PartialEq + Eq + Hash> {
     /// Maps each known `Package` to the set of manifests that depend on it.
     pkg_manifests: DashMap<Package, HashSet<ManifestId>>,
     /// Maps a package name to all known `P` versions seen across manifests.
     pkgs_by_name: DashMap<PackageName, HashSet<Package>>,
     /// Maps a package name to all OSV record IDs that affect it.
     records_by_name: DashMap<PackageName, HashSet<OsvRecordId>>,
+    /// Maps a manifest ID to all OSV record IDs that affect it.
+    records_by_manifest: DashMap<ManifestId, HashSet<OsvRecordId>>,
 }
 
 impl<ManifestId: Clone + PartialEq + Eq + Hash> Analyzer<ManifestId> {
@@ -26,7 +28,24 @@ impl<ManifestId: Clone + PartialEq + Eq + Hash> Analyzer<ManifestId> {
             pkg_manifests: DashMap::new(),
             pkgs_by_name: DashMap::new(),
             records_by_name: DashMap::new(),
+            records_by_manifest: DashMap::new(),
         }
+    }
+
+    /// Returns all [`OsvRecordId`]s associated with the given `manifest_id`.
+    ///
+    /// The returned list reflects every vulnerability record that was matched
+    /// against this manifest via [`Self::add_manifest`] or [`Self::add_osv_record`].
+    /// Returns an empty [`Vec`] if the manifest ID is unknown.
+    #[must_use]
+    pub fn osv_records_for_manifest(
+        &self,
+        manifest_id: &ManifestId,
+    ) -> Vec<OsvRecordId> {
+        self.records_by_manifest
+            .get(manifest_id)
+            .map(|records| records.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// Registers an OSV vulnerability record and returns every [`ManifestId`] whose
@@ -52,6 +71,10 @@ impl<ManifestId: Clone + PartialEq + Eq + Hash> Analyzer<ManifestId> {
                     {
                         for manifest_id in manifests.iter() {
                             hits.push(manifest_id.clone());
+                            self.records_by_manifest
+                                .entry(manifest_id.clone())
+                                .or_default()
+                                .insert(osv_record.id.clone());
                         }
                     }
                 }
@@ -109,6 +132,14 @@ impl<ManifestId: Clone + PartialEq + Eq + Hash> Analyzer<ManifestId> {
                 .entry(p.name.clone())
                 .or_default()
                 .insert(p);
+        }
+
+        let mut manifest_records = self
+            .records_by_manifest
+            .entry(manifest_id.clone())
+            .or_default();
+        for record_id in &records {
+            manifest_records.insert(record_id.clone());
         }
 
         Ok(records.into_iter().collect())
