@@ -1,8 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { NavLink } from 'react-router-dom';
 import { OppsyLogo } from '../../OppsyLogo/OppsyLogo';
 import { AppRoute } from '../../../routes/Routes';
 import styles from './LeftSidebar.module.css';
-import { NotificationIcon } from '../../Icons';
+import { NotificationIcon, RefreshIcon } from '../../Icons';
 
 function BookIcon() {
   return (
@@ -43,6 +44,8 @@ function GridIcon() {
 }
 
 export function LeftSidebar() {
+  const queryClient = useQueryClient();
+
   return (
     <nav className={styles.sidebar}>
       <div className={styles.logoArea}>
@@ -50,6 +53,16 @@ export function LeftSidebar() {
       </div>
 
       <div className={styles.navSection}>
+        <button
+          type="button"
+          className={styles.refreshBtn}
+          onClick={() => queryClient.invalidateQueries()}
+          aria-label="Refresh all data"
+        >
+          <RefreshIcon width={15} height={15} />
+          <span>Refresh</span>
+        </button>
+        <div className={styles.divider} />
         <NavLink
           end
           to={AppRoute.WorkspacesDashboard}

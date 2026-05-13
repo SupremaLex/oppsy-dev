@@ -3,7 +3,7 @@ import { useManifests, useRemoveWorkspaceManifest } from '../../../hooks/workspa
 import type { WorkspaceId } from '../../../api/workspaces';
 import { BackIcon } from '../../../components/Icons';
 import { ManifestRow } from './ManifestRow/ManifestRow';
-import { UploadManifestModal } from './UploadManifestModal/UploadManifestModal';
+import { apiBaseUrl } from '../../../api/client';
 import styles from './ManifestsSection.module.css';
 
 const PAGE_SIZE = 10;
@@ -31,25 +31,46 @@ type ManifestsSectionProps = {
   workspaceId: WorkspaceId;
 };
 
-function EmptyState({ onUpload }: { onUpload: () => void }) {
+type EmptyStateProps = {
+  workspaceId: WorkspaceId;
+};
+
+function EmptyState({ workspaceId }: EmptyStateProps) {
+  const serviceHost = apiBaseUrl();
+
+  const snippet =
+    `oppsy-cli publish \\\n` +
+    `  -W ${workspaceId} \\\n` +
+    `  -H ${serviceHost} \\\n` +
+    `  -L <path-to-manifest> \\\n` +
+    `  -N <name> \\\n` +
+    `  -T <tag>`;
+
   return (
     <div className={styles.emptyState}>
       <div className={styles.emptyIconWrap}>
         <UploadIcon size={22} />
       </div>
-      <p className={styles.emptyTitle}>No lock files yet</p>
+      <p className={styles.emptyTitle}>No manifests yet</p>
       <p className={styles.emptyDesc}>
-        Upload a lock file to start scanning your dependencies for vulnerabilities.
+        Upload a manifest using <code>oppsy-cli</code> to start scanning your dependencies.
       </p>
-      <button type="button" className={styles.emptyAction} onClick={onUpload}>
-        Upload your first file
-      </button>
+      <div className={styles.emptySnippet}>
+        <pre className={styles.emptySnippetPre}>{snippet}</pre>
+      </div>
+      <a
+        className={styles.emptyLearnMore}
+        href="https://oppsy-dev.github.io/oppsy-dev/manifest-upload.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Learn more ↗
+      </a>
     </div>
   );
 }
 
 export function ManifestsSection({ workspaceId }: ManifestsSectionProps) {
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [page, setPage] = useState(0);
   const { data: manifests = [], isLoading, isError } = useManifests(workspaceId);
   const removeMutation = useRemoveWorkspaceManifest(workspaceId);
@@ -94,16 +115,12 @@ export function ManifestsSection({ workspaceId }: ManifestsSectionProps) {
             {`${manifests.length} manifest${manifests.length === 1 ? '' : 's'}`}
           </p>
         </div>
-        <button type="button" className={styles.uploadBtn} onClick={() => setUploadModalOpen(true)}>
-          <UploadIcon />
-          Upload file
-        </button>
       </div>
 
       {isError && <p className={styles.errorMsg}>Failed to load manifests.</p>}
 
       {!isError && !isLoading && manifests.length === 0 ? (
-        <EmptyState onUpload={() => setUploadModalOpen(true)} />
+        <EmptyState workspaceId={workspaceId} />
       ) : (
         <>
           {pagesNaviation}
@@ -112,7 +129,6 @@ export function ManifestsSection({ workspaceId }: ManifestsSectionProps) {
               <div className={styles.tableHead}>
                 <span />
                 <span>Name</span>
-                <span>Ecosystem</span>
                 <span>Tag</span>
                 <span className={styles.tableHeadCenter}>Vulns</span>
                 <span>Uploaded</span>
@@ -130,10 +146,6 @@ export function ManifestsSection({ workspaceId }: ManifestsSectionProps) {
           </div>
           {pagesNaviation}
         </>
-      )}
-
-      {uploadModalOpen && (
-        <UploadManifestModal workspaceId={workspaceId} onClose={() => setUploadModalOpen(false)} />
       )}
     </div>
   );

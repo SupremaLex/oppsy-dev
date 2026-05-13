@@ -8,14 +8,6 @@ import { TrashIcon } from '../../../../components/Icons';
 type ManifestInfo =
   paths['/v1/workspaces/{workspace_id}/manifests']['get']['responses']['200']['content']['application/json; charset=utf-8']['manifests'][number];
 
-const ECO_CLASS: Record<string, string | undefined> = {
-  Npm: styles.ecoNpm,
-  Cargo: styles.ecoCargo,
-  Poetry: styles.ecoPoetry,
-  Go: styles.ecoNpm,
-  Uv: styles.ecoPoetry,
-};
-
 function ChevronIcon() {
   return (
     <svg
@@ -81,15 +73,6 @@ export function ManifestRow({ manifest, isLast, onRemove }: ManifestRowProps) {
           <span className={styles.filename}>{manifest.name}</span>
         </div>
 
-        <span
-          className={[
-            styles.ecosystemBadge,
-            ECO_CLASS[manifest.manifest_type] ?? styles.ecoNpm,
-          ].join(' ')}
-        >
-          {manifest.manifest_type}
-        </span>
-
         <code className={styles.tag}>{manifest.tag ?? '—'}</code>
 
         <span
@@ -126,8 +109,8 @@ export function ManifestRow({ manifest, isLast, onRemove }: ManifestRowProps) {
             </div>
           ) : (
             <div className={styles.vulnList}>
-              {vulns.map((v) => (
-                <OsvRecordRow key={v.osv_id} osvId={v.osv_id} detectedAt={v.detected_at} />
+              {vulns.map((osv_id) => (
+                <OsvRecordRow key={osv_id} osvId={osv_id} />
               ))}
             </div>
           )}

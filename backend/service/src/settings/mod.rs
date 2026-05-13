@@ -1,19 +1,20 @@
+mod osv;
 #[cfg(test)]
 mod tests;
 
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
-    time::Duration,
 };
 
 use config::Config;
+pub use osv::OsvSettings;
 use serde::Deserialize;
 use url::Url;
 
 use crate::resources::Resource;
 
-const ENV_VAR_PREFIX: &str = "OSV_SERVICE";
+const ENV_VAR_PREFIX: &str = "OPPSY_SERVICE";
 
 const fn default_bind_address() -> SocketAddr {
     SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 3030)
@@ -27,31 +28,12 @@ fn default_manifest_db_path() -> PathBuf {
     PathBuf::from("./manifest_db")
 }
 
-fn default_osv_db_path() -> PathBuf {
-    PathBuf::from("./osv_db")
-}
-
 fn default_frontend_path() -> PathBuf {
     PathBuf::from("./frontend")
 }
 
 pub(super) fn default_core_db_url() -> String {
     "sqlite://oppsy.db".to_string()
-}
-
-const fn default_osv_sync_interval() -> Duration {
-    Duration::from_mins(15)
-}
-
-mod duration_mins {
-    use std::time::Duration;
-
-    use serde::{Deserialize, Deserializer};
-
-    pub fn deserialize<'de, D>(d: D) -> Result<Duration, D::Error>
-    where D: Deserializer<'de> {
-        u64::deserialize(d).map(Duration::from_mins)
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -72,34 +54,21 @@ pub struct Settings {
     /// files.
     ///
     /// Defaults to `./manifest_db` relative to the working directory.
-    /// Set `OSV_SERVICE_MANIFEST_DB_PATH` to override.
+    /// Set `OPPSY_SERVICE_MANIFEST_DB_PATH` to override.
     ///
     /// [`ManifestDb`]: crate::db::manifest_db::ManifestDb
     #[serde(default = "default_manifest_db_path")]
     pub manifest_db_path: PathBuf,
-    /// Filesystem path to the directory used by [`OsvDb`] for storing OSV data.
-    ///
-    /// Defaults to `./osv_db` relative to the working directory.
-    /// Set `OSV_SERVICE_OSV_DB_PATH` to override.
-    ///
-    /// [`OsvDb`]: crate::db::osv_db::OsvDb
-    #[serde(default = "default_osv_db_path")]
-    pub osv_db_path: PathBuf,
     /// `SQLite` connection URL used by [`CoreDb`].
     ///
     /// Defaults to `sqlite://oppsy.db` relative to the working directory.
-    /// Set `OSV_SERVICE_CORE_DB_URL` to override.
+    /// Set `OPPSY_SERVICE_CORE_DB_URL` to override.
     #[serde(default = "default_core_db_url")]
     pub core_db_url: String,
-    /// How often the OSV background sync task runs in minutes.
-    ///
-    /// Defaults to 15 minutes.
-    /// Set `OSV_SERVICE_OSV_SYNC_INTERVAL` to override.
-    ///
-    /// <https://google.github.io/osv.dev/faq/>
-    /// "Data Freshness: Data sources no more than 15 minutes stale, 99.5% of the time."
-    #[serde(with = "duration_mins", default = "default_osv_sync_interval")]
-    pub osv_sync_interval: Duration,
+    /// OSV-specific settings (`osv_db_path`, `osv_sync_interval`).
+    /// Deserialized transparently from the same env-var namespace.
+    #[serde(flatten)]
+    pub osv: OsvSettings,
     /// Filesystem path to the directory containing the built frontend assets.
     ///
     /// The backend serves the React SPA from this directory at `/`, falling
@@ -107,14 +76,14 @@ pub struct Settings {
     /// under `api_url_prefix` and `/docs` always take priority.
     ///
     /// Defaults to `./frontend` relative to the working directory.
-    /// Set `OSV_SERVICE_FRONTEND_PATH` to override.
+    /// Set `OPPSY_SERVICE_FRONTEND_PATH` to override.
     #[serde(default = "default_frontend_path")]
     pub frontend_path: PathBuf,
     /// SMTP server URL used for email notifications.
     ///
     /// Format: `smtp://username:password@host:port`
     /// If not set, email notifications are disabled.
-    /// Set `OSV_SERVICE_SMTP_URL` to enable.
+    /// Set `OPPSY_SERVICE_SMTP_URL` to enable.
     #[serde(default)]
     pub smtp_url: Option<Url>,
 }
@@ -142,7 +111,12 @@ impl Settings {
     /// - Returns an error if any required environment variable is absent or malformed.
     fn load() -> anyhow::Result<Self> {
         let res: Settings = Config::builder()
-            .add_source(config::Environment::with_prefix(ENV_VAR_PREFIX).try_parsing(true))
+            .add_source(
+                config::Environment::with_prefix(ENV_VAR_PREFIX)
+                    .try_parsing(true)
+                    .list_separator(",")
+                    .with_list_parse_key("osv_ecosystems"),
+            )
             .build()?
             .try_deserialize()?;
         Ok(res)

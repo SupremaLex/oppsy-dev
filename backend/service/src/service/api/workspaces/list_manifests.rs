@@ -1,17 +1,15 @@
+use core_db::workspace::errors::GetWorkspaceManifestsError;
 use poem_openapi::{ApiResponse, Object, payload::Json};
 use tracing::warn;
 
 use crate::{
-    db::{CoreDb, ManifestDb},
+    db::{CoreDb, ManifestDb, OsvDb},
     resources::ResourceRegistry,
     service::common::{
         responses::{WithErrorResponses, try_or_return},
         types::{error_msg::ErrorMessage, limit::Limit, page::Page, page_info::PageInfo},
     },
-    types::{
-        ManifestId, ManifestInfo, ManifestName, ManifestTag, ManifestType, ManifestVuln,
-        WorkspaceId,
-    },
+    types::{ManifestId, ManifestInfo, ManifestName, ManifestTag, OsvId, WorkspaceId},
 };
 
 /// Response body for listing manifests.
@@ -38,6 +36,11 @@ pub enum Responses {
     /// The workspace ID does not exist or is not assigned to the authenticated user.
     #[oai(status = 422)]
     UnprocessableContent(Json<ErrorMessage>),
+    /// ## Not Found
+    ///
+    /// Manifest id does not exists.
+    #[oai(status = 404)]
+    NotFound,
 }
 
 /// All responses.
@@ -50,16 +53,22 @@ pub async fn endpoint(
 ) -> AllResponses {
     let core_db = try_or_return!(ResourceRegistry::get::<CoreDb>());
     let manifest_db = try_or_return!(ResourceRegistry::get::<ManifestDb>());
+    let osv_db = try_or_return!(ResourceRegistry::get::<OsvDb>());
     let page_info = PageInfo {
         page: page.unwrap_or_default(),
         limit: limit.unwrap_or_default(),
     };
 
-    let db_manifests = try_or_return!(
-        core_db
-            .get_workspace_manifests(workspace_id, page_info)
-            .await
-    );
+    let db_manifests = match core_db
+        .get_workspace_manifests(workspace_id, page_info)
+        .await
+    {
+        Ok(v) => v,
+        Err(GetWorkspaceManifestsError::NotFound { .. }) => {
+            return Responses::NotFound.into();
+        },
+        Err(err) => try_or_return!(Err(err)),
+    };
 
     let mut manifests = Vec::with_capacity(db_manifests.len());
     for db_manifest in db_manifests {
@@ -68,19 +77,19 @@ pub async fn endpoint(
             warn!(
                 id=%manifest_id,
                 name=db_manifest.name,
-                type=%db_manifest.manifest_type,
                 "Manifest does not exists in the manifest storage, need to upload it first"
             );
             continue;
         }
 
-        let manifest_type = try_or_return!(ManifestType::try_from(db_manifest.manifest_type));
-        let vulns = try_or_return!(core_db.get_manifest_osv_vulns(manifest_id).await);
-        let vulnerabilities =
-            try_or_return!(vulns.into_iter().map(ManifestVuln::try_from).collect());
+        let vulnerabilities = osv_db
+            .osv_records_for_manifest(&manifest_id)
+            .into_iter()
+            .map(OsvId::from)
+            .collect();
+
         manifests.push(ManifestInfo {
             id: manifest_id,
-            manifest_type,
             name: ManifestName::from(db_manifest.name),
             tag: db_manifest.tag.map(ManifestTag::from),
             vulnerabilities,

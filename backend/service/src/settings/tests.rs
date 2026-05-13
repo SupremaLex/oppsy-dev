@@ -1,5 +1,6 @@
-use std::{path::PathBuf, sync::Mutex};
+use std::{path::PathBuf, sync::Mutex, time::Duration};
 
+use osv_db::OsvGsEcosystem;
 use test_case::test_case;
 
 use super::*;
@@ -19,9 +20,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -29,7 +29,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_BIND_ADDRESS".to_string(), value: "127.0.0.1:3030".to_string() }
+            EnvVar {key: "OPPSY_SERVICE_BIND_ADDRESS".to_string(), value: "127.0.0.1:3030".to_string() }
         ]
         => Settings {
             bind_address: "127.0.0.1:3030".parse().unwrap(),
@@ -37,9 +37,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -47,7 +46,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_LOG_FORMAT".to_string(), value: "json".to_string() }
+            EnvVar {key: "OPPSY_SERVICE_LOG_FORMAT".to_string(), value: "json".to_string() }
         ]
         => Settings {
             bind_address: default_bind_address(),
@@ -55,9 +54,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -65,7 +63,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_LOG_LEVEL".to_string(), value: "DEBUG".to_string() }
+            EnvVar {key: "OPPSY_SERVICE_LOG_LEVEL".to_string(), value: "DEBUG".to_string() }
         ]
         => Settings {
             bind_address: default_bind_address(),
@@ -73,9 +71,8 @@ struct EnvVar {
             log_level: LogLevel::Debug,
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -83,7 +80,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_API_URL_PREFIX".to_string(), value: "/v1".to_string() }
+            EnvVar {key: "OPPSY_SERVICE_API_URL_PREFIX".to_string(), value: "/v1".to_string() }
         ]
         => Settings {
             bind_address: default_bind_address(),
@@ -91,9 +88,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: "/v1".to_string(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -101,7 +97,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_MANIFEST_DB_PATH".to_string(), value: "/var/data/manifests".to_string() }
+            EnvVar {key: "OPPSY_SERVICE_MANIFEST_DB_PATH".to_string(), value: "/var/data/manifests".to_string() }
         ]
         => Settings {
             bind_address: default_bind_address(),
@@ -109,9 +105,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: PathBuf::from("/var/data/manifests"),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -119,7 +114,7 @@ struct EnvVar {
     )]
 #[test_case(
         &[
-            EnvVar {key: "OSV_SERVICE_OSV_DB_PATH".to_string(), value: "/var/data/osv".to_string() },
+            EnvVar {key: "OPPSY_SERVICE_OSV_DB_PATH".to_string(), value: "/var/data/osv".to_string() },
         ]
         => Settings {
             bind_address: default_bind_address(),
@@ -127,9 +122,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: PathBuf::from("/var/data/osv"),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: PathBuf::from("/var/data/osv"), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -138,7 +132,7 @@ struct EnvVar {
 #[test_case(
         &[
             EnvVar {
-                key: "OSV_SERVICE_CORE_DB_URL".to_string(),
+                key: "OPPSY_SERVICE_CORE_DB_URL".to_string(),
                 value: "sqlite:///var/data/core.db".to_string(),
             },
         ]
@@ -148,9 +142,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: "sqlite:///var/data/core.db".to_string(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -159,7 +152,7 @@ struct EnvVar {
 #[test_case(
         &[
             EnvVar {
-                key: "OSV_SERVICE_OSV_SYNC_INTERVAL".to_string(),
+                key: "OPPSY_SERVICE_OSV_SYNC_INTERVAL".to_string(),
                 value: "10".to_string(),
             },
         ]
@@ -169,9 +162,8 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: Duration::from_mins(10),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: Duration::from_mins(10), osv_ecosystems: vec![] },
             frontend_path: default_frontend_path(),
             smtp_url: None,
         };
@@ -180,7 +172,7 @@ struct EnvVar {
 #[test_case(
         &[
             EnvVar {
-                key: "OSV_SERVICE_FRONTEND_PATH".to_string(),
+                key: "OPPSY_SERVICE_FRONTEND_PATH".to_string(),
                 value: "/var/www/frontend".to_string(),
             },
         ]
@@ -190,13 +182,40 @@ struct EnvVar {
             log_level: LogLevel::default(),
             api_url_prefix: default_api_url_prefix(),
             manifest_db_path: default_manifest_db_path(),
-            osv_db_path: default_osv_db_path(),
             core_db_url: default_core_db_url(),
-            osv_sync_interval: default_osv_sync_interval(),
+            osv: OsvSettings { osv_db_path: osv::default_osv_db_path(), osv_sync_interval: osv::default_osv_sync_interval(), osv_ecosystems: vec![] },
             frontend_path: PathBuf::from("/var/www/frontend"),
             smtp_url: None,
         };
         "set frontend path"
+    )]
+#[test_case(
+        &[
+            EnvVar {
+                key: "OPPSY_SERVICE_OSV_ECOSYSTEMS".to_string(),
+                value: "Ubuntu,crates.io,npm".to_string(),
+            },
+        ]
+        => Settings {
+            bind_address: default_bind_address(),
+            log_format: LogFormat::default(),
+            log_level: LogLevel::default(),
+            api_url_prefix: default_api_url_prefix(),
+            manifest_db_path: default_manifest_db_path(),
+            core_db_url: default_core_db_url(),
+            osv: OsvSettings {
+                osv_db_path: osv::default_osv_db_path(),
+                osv_sync_interval: osv::default_osv_sync_interval(),
+                osv_ecosystems: vec![
+                        OsvGsEcosystem::Ubuntu,
+                        OsvGsEcosystem::CratesIo,
+                        OsvGsEcosystem::Npm
+                    ]
+                },
+            frontend_path: default_frontend_path(),
+            smtp_url: None,
+        };
+        "set osv ecosystems"
     )]
 fn settings_init_test(env_vars: &[EnvVar]) -> Settings {
     let guard = ENV_LOCK.lock().unwrap();
