@@ -1,0 +1,30 @@
+name: Python CI
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**.py"
+      - "ruff.toml"
+      - "Justfile"
+      - ".github/workflows/python_ci.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "**.py"
+      - "ruff.toml"
+      - "Justfile"
+      - ".github/workflows/python_ci.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+      - uses: extractions/setup-just@v3
+
+      - name: Lint check
+        run: just python-lint-check
