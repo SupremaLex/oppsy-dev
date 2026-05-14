@@ -1,4 +1,3 @@
-use core_db::workspace::errors::GetWorkspaceError;
 use poem_openapi::{ApiResponse, Object, payload::Json};
 use tracing::{debug, warn};
 
@@ -80,11 +79,6 @@ pub async fn endpoint(
     let vulnerable_only = vulnerable_only.unwrap_or(false);
 
     // Workspace ownership: one row each, no full-table scan.
-    match core_db.get_workspace(workspace_id).await {
-        Ok(_) => {},
-        Err(GetWorkspaceError::NotFound { .. }) => return Responses::NotFound.into(),
-        Err(err) => try_or_return!(Err(err)),
-    }
     let in_workspace = try_or_return!(
         core_db
             .is_manifest_in_workspace(workspace_id, manifest_id)
