@@ -88,10 +88,7 @@ export function PackagesTab({ workspaceId, manifestId, id, labelledBy }: Package
       {filterBar}
       <div className={styles.list}>
         {packages.map((pkg, idx) => (
-          <div
-            key={`${idx}:${pkg.ecosystem}:${pkg.name}@${pkg.version}`}
-            className={styles.row}
-          >
+          <div key={`${idx}:${pkg.ecosystem}:${pkg.name}@${pkg.version}`} className={styles.row}>
             <span className={styles.name}>{pkg.name}</span>
             <span className={styles.version}>{pkg.version}</span>
             <span className={styles.ecosystem}>{pkg.ecosystem}</span>
